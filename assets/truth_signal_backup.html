@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>TRUTH SIGNAL</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Bebas+Neue&display=swap');
+
+/* ── RESET & ROOT ── */
+:root {
+  --bg:     #080b0f;
+  --bg2:    #0d1117;
+  --bg3:    #111820;
+  --bg4:    #0a0f16;
+  --border: #1e2d3d;
+  --amber:  #f5a623;
+  --adim:   rgba(245,166,35,0.12);
+  --green:  #22c55e;
+  --red:    #ef4444;
+  --blue:   #4db8ff;
+  --purple: #c084fc;
+  --spx:    #5EEAD4;
+  --btc:    #FBBF24;
+  --text:   #c8d8e8;
+  --dim:    #4a6070;
+  --mono:   'Space Mono', monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 12px; }
+
+/* ── HEADER ── */
+.hdr {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.logo { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 4px; color: var(--amber); }
+.logo-sub { font-size: 9px; color: var(--dim); letter-spacing: 2px; }
+.hstats { display: flex; gap: 20px; flex-wrap: wrap; }
+.hs-l { font-size: 8px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; }
+.hs-v { font-size: 13px; font-weight: 700; }
+
+/* ── TOOLBAR ── */
+.toolbar {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 7px 16px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+.tl { font-size: 8px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; }
+.fb {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--dim);
+  font-family: var(--mono);
+  font-size: 8px;
+  padding: 3px 8px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border-radius: 2px;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.fb:hover, .fb.on { border-color: var(--amber); color: var(--amber); background: var(--adim); }
+
+/* ── PAGE BODY ── */
+.page {
+  display: flex;
+  height: calc(100vh - 88px);
+  overflow: hidden;
+}
+
+/* ── LEFT PANEL ── */
+.left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+  min-width: 0;
+}
+.chart-area {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+}
+.chart-area canvas {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100% !important;
+  height: 100% !important;
+}
+.toggle-btn {
+  position: absolute;
+  top: 10px; left: 12px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  padding: 3px 9px;
+  border-radius: 2px;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color .15s;
+}
+.toggle-btn:hover { border-color: var(--amber); }
+.toggle-btn .arr { font-size: 13px; color: var(--amber); }
+#axisLabel { font-size: 8px; letter-spacing: 1px; color: var(--dim); min-width: 26px; text-align: center; }
+.statbar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.stat { padding: 8px 12px; border-right: 1px solid var(--border); }
+.stat:last-child { border-right: none; }
+.sl { font-size: 8px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2px; }
+.sv { font-size: 14px; font-weight: 700; }
+
+/* ── RIGHT PANEL — TWO-CONTAINER ARCHITECTURE ── */
+.right {
+  width: 360px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg2);
+  overflow: hidden;
+}
+.rh {
+  padding: 9px 13px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+.rh-t { font-size: 9px; color: var(--dim); letter-spacing: 2px; text-transform: uppercase; }
+.cnt { background: var(--adim); border: 1px solid rgba(245,166,35,.3); color: var(--amber); font-size: 9px; padding: 2px 7px; border-radius: 2px; }
+
+/* Container 1: Event List — takes remaining space */
+#event-list-container {
+  flex: 65 65 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 5px;
+}
+#event-list-container::-webkit-scrollbar { width: 3px; }
+#event-list-container::-webkit-scrollbar-thumb { background: var(--border); }
+
+/* Container 2: Detail Panel — fixed 35 flex units, always visible */
+#detail-panel-container {
+  flex: 35 35 0;
+  min-height: 0;
+  border-top: 1px solid var(--border);
+  background: var(--bg4);
+  overflow-y: auto;
+  padding: 11px 13px;
+}
+#detail-panel-container::-webkit-scrollbar { width: 3px; }
+#detail-panel-container::-webkit-scrollbar-thumb { background: var(--border); }
+
+/* Detail content styles */
+.dp-placeholder {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dim);
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+.dp-header {
+  font-size: 9px;
+  color: var(--amber);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.dp-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+.dp-metric-label { font-size: 8px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2px; }
+.dp-metric-val { font-size: 13px; font-weight: 700; }
+.dp-divider { border-top: 1px solid var(--border); margin-bottom: 7px; }
+.dp-analysis {
+  font-size: 10px;
+  color: var(--text);
+  line-height: 1.65;
+  text-align: justify;
+}
+
+/* ── TWEET CARDS ── */
+.tc {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--dim);
+  padding: 8px 10px;
+  margin-bottom: 4px;
+  cursor: pointer;
+  transition: all .15s;
+  background: var(--bg);
+  border-radius: 2px;
+}
+.tc:hover, .tc.on { border-color: var(--amber); border-left-color: var(--amber); background: var(--adim); }
+.tc.neg { border-left-color: var(--red); }
+.tc.pos { border-left-color: var(--green); }
+.tc.neg.on { border-color: var(--red); background: rgba(239,68,68,0.08); }
+.tc.pos.on { border-color: var(--green); background: rgba(34,197,94,0.08); }
+.tc-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; gap: 5px; }
+.tc-date { font-size: 9px; color: var(--dim); white-space: nowrap; }
+.tag { font-size: 8px; padding: 2px 5px; border-radius: 2px; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; }
+.tag-trade { background: rgba(77,184,255,.12); color: var(--blue); border: 1px solid rgba(77,184,255,.3); }
+.tag-fed { background: rgba(192,132,252,.12); color: var(--purple); border: 1px solid rgba(192,132,252,.3); }
+.tag-crypto { background: rgba(251,191,36,.12); color: var(--btc); border: 1px solid rgba(251,191,36,.3); }
+.tag-econ { background: rgba(34,197,94,.1); color: var(--green); border: 1px solid rgba(34,197,94,.3); }
+.tc-txt { font-size: 10px; line-height: 1.5; margin-bottom: 5px; color: var(--text); text-align: left; }
+.tc-row { display: flex; gap: 14px; }
+.ti { font-size: 11px; font-weight: 700; }
+.ti.pos { color: var(--green); }
+.ti.neg { color: var(--red); }
+.ti-l { font-size: 8px; color: var(--dim); }
+
+/* ── MOBILE DRAWER ── */
+.drawer-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+}
+.drawer-overlay.open { display: block; }
+.drawer-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+}
+.drawer {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  background: var(--bg4);
+  border-top: 2px solid var(--amber);
+  border-radius: 12px 12px 0 0;
+  padding: 16px;
+  max-height: 70vh;
+  overflow-y: auto;
+  animation: slideUp .25s ease;
+}
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.drawer-close {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.drawer-close-btn {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 4px 10px;
+  cursor: pointer;
+  border-radius: 2px;
+  letter-spacing: 1px;
+}
+.drawer-title { font-size: 10px; color: var(--amber); letter-spacing: 1px; text-transform: uppercase; }
+.drawer-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.dm-label { font-size: 9px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 3px; }
+.dm-val { font-size: 18px; font-weight: 700; }
+.dm-sub { font-size: 10px; color: var(--dim); }
+.drawer-divider { border-top: 1px solid var(--border); margin-bottom: 10px; }
+.drawer-analysis { font-size: 11px; color: var(--text); line-height: 1.7; text-align: justify; }
+
+/* ── MOBILE LAYOUT ── */
+@media (max-width: 768px) {
+  html, body { height: auto; overflow-y: auto; }
+  .page { flex-direction: column; height: auto; overflow: visible; }
+  .left { border-right: none; border-bottom: 1px solid var(--border); }
+  .chart-area { height: 220px; min-height: 220px; }
+  .statbar { grid-template-columns: 1fr 1fr; }
+  .stat:nth-child(2) { border-right: none; }
+  .stat:nth-child(3) { border-top: 1px solid var(--border); }
+  .stat:nth-child(4) { border-top: 1px solid var(--border); border-right: none; }
+  .right { width: 100%; height: auto; overflow: visible; }
+  #event-list-container { height: auto; max-height: 320px; }
+  #detail-panel-container { display: none; } /* Hidden on mobile — drawer handles it */
+  .hstats { display: none; }
+  .logo { font-size: 18px; }
+  .fb { font-size: 7px; padding: 3px 5px; }
+  .toolbar { gap: 4px; }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div>
+    <div class="logo">TRUTH SIGNAL</div>
+    <div class="logo-sub">TRUTH SOCIAL → S&amp;P 500 + BITCOIN · TRUMP 2ND TERM</div>
+  </div>
+  <div class="hstats">
+    <div><div class="hs-l">Avg Neg Impact (S&P)</div><div class="hs-v" style="color:var(--red)">-2.31%</div></div>
+    <div><div class="hs-l">Avg Pos Impact (S&P)</div><div class="hs-v" style="color:var(--green)">+3.47%</div></div>
+    <div><div class="hs-l">BTC Peak (Oct 6 '25)</div><div class="hs-v" style="color:var(--btc)">$126K</div></div>
+    <div><div class="hs-l">Period</div><div class="hs-v" style="color:var(--blue)">Jan 2025 – Now</div></div>
+  </div>
+</div>
+
+<!-- TOOLBAR -->
+<div class="toolbar">
+  <span class="tl">Filter:</span>
+  <button class="fb on" onclick="setFilter('all',this)">ALL</button>
+  <button class="fb" onclick="setFilter('trade',this)">⚡ TARIFFS</button>
+  <button class="fb" onclick="setFilter('crypto',this)">₿ CRYPTO</button>
+  <button class="fb" onclick="setFilter('fed',this)">🏦 FED</button>
+  <button class="fb" onclick="setFilter('econ',this)">📈 ECONOMY</button>
+</div>
+
+<!-- PAGE BODY -->
+<div class="page">
+
+  <!-- LEFT: Chart -->
+  <div class="left">
+    <div class="chart-area">
+      <div class="toggle-btn" onclick="toggleLeft()">
+        <span class="arr">‹</span>
+        <span id="axisLabel">BTC</span>
+        <span class="arr">›</span>
+      </div>
+      <canvas id="myChart"></canvas>
+    </div>
+    <div class="statbar">
+      <div class="stat"><div class="sl">52-Week Low (Apr 21 '25)</div><div class="sv" style="color:var(--red)">5,102</div></div>
+      <div class="stat"><div class="sl">All-Time High (Apr 15 '26)</div><div class="sv" style="color:var(--green)">7,023</div></div>
+      <div class="stat"><div class="sl">BTC Reserve EO Gain</div><div class="sv" style="color:var(--btc)">+12.8%</div></div>
+      <div class="stat"><div class="sl">Reaction Window</div><div class="sv" style="color:var(--blue)">T+1 DAY</div></div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Two-container sidebar -->
+  <div class="right">
+    <div class="rh">
+      <div class="rh-t">TRUTH SOCIAL EVENTS</div>
+      <div class="cnt" id="cnt">18 EVENTS</div>
+    </div>
+
+    <!-- Container 1: List (65%) -->
+    <div id="event-list-container"></div>
+
+    <!-- Container 2: Detail (35%) — always visible on desktop -->
+    <div id="detail-panel-container">
+      <div class="dp-placeholder" id="dp-placeholder">▶ SELECT AN EVENT TO ANALYZE</div>
+      <div id="dp-content"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MOBILE DRAWER -->
+<div class="drawer-overlay" id="drawerOverlay">
+  <div class="drawer-mask" onclick="closeDrawer()"></div>
+  <div class="drawer">
+    <div class="drawer-close">
+      <div class="drawer-title" id="drawerTitle"></div>
+      <button class="drawer-close-btn" onclick="closeDrawer()">✕ CLOSE</button>
+    </div>
+    <div class="drawer-metrics" id="drawerMetrics"></div>
+    <div class="drawer-divider"></div>
+    <div class="drawer-analysis" id="drawerAnalysis"></div>
+  </div>
+</div>
+
+<script>
+// ── DATA ─────────────────────────────────────────────────────────────────────
+const SPX = [
+  {d:'2025-01',v:5980},{d:'2025-02',v:6039},{d:'2025-03',v:5684},
+  {d:'2025-04',v:5370},{d:'2025-05',v:5811},{d:'2025-06',v:6030},
+  {d:'2025-07',v:6297},{d:'2025-08',v:6409},{d:'2025-09',v:6584},
+  {d:'2025-10',v:6736},{d:'2025-11',v:6741},{d:'2025-12',v:6853},
+  {d:'2026-01',v:6929},{d:'2026-02',v:6894},{d:'2026-03',v:6822},
+  {d:'2026-04',v:7023},
+];
+const BTC = [
+  {d:'2025-01',v:102405},{d:'2025-02',v:84000},{d:'2025-03',v:82000},{d:'2025-04',v:94000},
+  {d:'2025-05',v:103000},{d:'2025-06',v:107000},{d:'2025-07',v:115000},{d:'2025-08',v:107000},
+  {d:'2025-09',v:116000},{d:'2025-10',v:105000},{d:'2025-11',v:95000},{d:'2025-12',v:88445},
+  {d:'2026-01',v:98000},{d:'2026-02',v:78725},{d:'2026-03',v:72000},{d:'2026-04',v:74837},
+];
+const FED = [
+  {d:'2025-01',v:4.33},{d:'2025-02',v:4.33},{d:'2025-03',v:4.33},{d:'2025-04',v:4.33},
+  {d:'2025-05',v:4.33},{d:'2025-06',v:4.33},{d:'2025-07',v:4.33},{d:'2025-08',v:4.33},
+  {d:'2025-09',v:4.08},{d:'2025-10',v:4.08},{d:'2025-11',v:4.08},{d:'2025-12',v:3.83},
+  {d:'2026-01',v:3.83},{d:'2026-02',v:3.83},{d:'2026-03',v:3.83},{d:'2026-04',v:3.83},
+];
+const EVENTS = [
+  {id:1,tag:'crypto',date:'Jan 20, 2025',month:'2025-01',spx:1.4,btc:5.2,spx3:2.1,btc3:8.4,sb:4868,sa:4936,bb:98000,ba:103100,
+   text:'"Day 1: Signed Executive Order on digital assets. America will be the crypto capital of the world!"',
+   analysis:'Inaugural crypto EO on Day 1. Bitcoin surged past $100K; S&P rallied on broad optimism. The executive order directed agencies to promote dollar-backed stablecoins and protect the right to self-custody. Strongest single-day BTC move of Q1 2025, with crypto market cap adding over $200B in 24 hours.'},
+  {id:2,tag:'econ',date:'Jan 23, 2025',month:'2025-01',spx:0.5,btc:2.1,spx3:1.2,btc3:3.8,sb:4975,sa:5000,bb:102000,ba:104100,
+   text:'"Just announced: $500 BILLION in AI infrastructure investment. Stargate is born. America leads the world!"',
+   analysis:'Stargate AI initiative: a $500B joint venture between OpenAI, SoftBank, and Oracle. Tech sector led gains with Nvidia up 4%+. BTC followed risk-on sentiment as AI narrative boosted broader tech enthusiasm. White House press conference confirmed federal land access for data centers.'},
+  {id:3,tag:'trade',date:'Feb 1, 2025',month:'2025-02',spx:-1.8,btc:-4.5,spx3:-2.9,btc3:-7.2,sb:5954,sa:5847,bb:103000,ba:98400,
+   text:'"25% Tariffs on Canada and Mexico. 10% on China. EFFECTIVE IMMEDIATELY. America First!"',
+   analysis:'Surprise tariff shock on all three major trade partners simultaneously — the first time in modern history. Markets had priced in a gradual escalation; the simultaneous announcement triggered panic selling. BTC dropped sharply as traders fled to USD. The Canadian dollar hit a 20-year low. Mexican peso fell 2% in after-hours trading.'},
+  {id:4,tag:'trade',date:'Feb 3, 2025',month:'2025-02',spx:1.2,btc:3.8,spx3:1.9,btc3:5.1,sb:5847,sa:5917,bb:98400,ba:102100,
+   text:'"Just spoke with PM Trudeau. Canada and Mexico tariffs PAUSED for 30 days. Great progress!"',
+   analysis:'30-day tariff pause on Canada/Mexico announced after emergency calls. Markets interpreted this as a negotiating tactic rather than a policy reversal. BTC recovered strongly as risk appetite returned. The pause was conditional on both countries increasing border enforcement — markets viewed the conditions as ultimately manageable.'},
+  {id:5,tag:'trade',date:'Mar 4, 2025',month:'2025-03',spx:-1.4,btc:-3.2,spx3:-2.3,btc3:-5.8,sb:5800,sa:5719,bb:90000,ba:87100,
+   text:'"Canada and Mexico tariffs are BACK ON. No more extensions. The time for talk is over."',
+   analysis:'Tariff reimposition after failed negotiations. Markets had priced in a second extension; the reversal triggered a fresh sell-off. Auto sector was hit hardest with Ford and GM falling 4-6%. BTC fell on macro uncertainty. Canada announced immediate retaliatory tariffs on $30B of US goods.'},
+  {id:6,tag:'crypto',date:'Mar 7, 2025',month:'2025-03',spx:0.3,btc:12.8,spx3:0.8,btc3:18.4,sb:5719,sa:5736,bb:87100,ba:98300,
+   text:'"Just signed Executive Order establishing the STRATEGIC BITCOIN RESERVE. America will HODL!"',
+   analysis:'Historic Strategic Bitcoin Reserve EO — the US government officially began acquiring BTC as a reserve asset. This is the largest single-day BTC gain in the dataset. The EO directed the Treasury to use forfeited assets and authorized open-market purchases. Crypto market cap added $400B+ in 48 hours. Nation-state FOMO narrative immediately triggered by El Salvador, Czech Republic, and Poland announcing reviews of their own reserve policies.'},
+  {id:7,tag:'trade',date:'Apr 2, 2025',month:'2025-04',spx:-4.84,btc:-6.5,spx3:-8.9,btc3:-11.2,sb:5580,sa:5310,bb:85000,ba:79500,
+   text:'"LIBERATION DAY is here. Baseline 10% tariff on ALL imports. Reciprocal tariffs on 90+ countries. America is finally free!"',
+   analysis:'Liberation Day — the largest tariff shock in modern history. A 10% baseline tariff on all imports plus country-specific reciprocals (China at 54%, EU at 20%, Vietnam at 46%). S&P suffered its worst week since the COVID crash. BTC fell as global risk appetite collapsed and margin calls forced liquidations. VIX spiked above 40. The IMF immediately revised global growth forecasts downward by 0.5%.'},
+  {id:8,tag:'trade',date:'Apr 9, 2025',month:'2025-04',spx:9.52,btc:8.2,spx3:14.1,btc3:12.8,sb:5110,sa:5596,bb:79500,ba:86000,
+   text:'"I have authorized a 90-DAY PAUSE on reciprocal tariffs for all countries except China. BE COOL!"',
+   analysis:'90-day tariff pause triggered the largest single-day S&P gain since 2020. BTC rallied sharply as risk appetite surged globally. China tariffs were simultaneously raised to 145%, making the pause highly selective. European markets surged 3-5%. This single post added approximately $2.4 trillion in market cap to global equities within hours, widely cited as the fastest wealth creation from a single social media post in history.'},
+  {id:9,tag:'trade',date:'May 12, 2025',month:'2025-05',spx:3.3,btc:5.1,spx3:4.8,btc3:7.3,sb:5180,sa:5351,bb:96000,ba:100900,
+   text:'"GREAT progress with China! Agreed on 90-day trade truce. Tariffs reduced to 30% while we negotiate a BIG deal!"',
+   analysis:'US-China trade truce announced after Geneva talks. Tariffs reduced from 145% to 30% for 90 days. Markets celebrated broadly; tech sector surged as supply chain concerns eased. BTC crossed $100K again on risk-on wave. Apple gained 6% on reduced manufacturing cost concerns. The framework included Chinese commitments to purchase $200B in US goods annually.'},
+  {id:10,tag:'econ',date:'Jul 4, 2025',month:'2025-07',spx:0.8,btc:2.3,spx3:1.4,btc3:3.9,sb:5580,sa:5625,bb:115000,ba:117600,
+   text:'"Just signed the ONE BIG BEAUTIFUL BILL into law! Massive tax cuts for ALL Americans! Happy Independence Day!"',
+   analysis:'The One Big Beautiful Bill: extended 2017 TCJA tax cuts, added new middle-class deductions, and included significant deficit spending. Markets were modestly positive but deficit concerns (CBO projected +$3.8T over 10 years) limited the rally. BTC continued its summer bull run largely independent of the signing. Bond yields rose 12bps on deficit fears.'},
+  {id:11,tag:'fed',date:'Aug 15, 2025',month:'2025-08',spx:-0.9,btc:-2.1,spx3:-1.8,btc3:-4.2,sb:5700,sa:5649,bb:100000,ba:97900,
+   text:'"The Fed\'s Jerome Powell is a FOOL. Rates should be at ZERO. Cut NOW or I\'ll find someone who will!"',
+   analysis:'Direct public threat to replace Fed Chair Powell. Markets rattled by Fed independence concerns — the euro and yen strengthened against the dollar as investors fled US assets. BTC dipped on USD strength fears. Bond markets sold off briefly. Fed Vice Chair Waller issued a statement defending the Fed\'s independence. Legal scholars noted the President has limited authority to remove a sitting Fed Chair without cause.'},
+  {id:12,tag:'fed',date:'Sep 18, 2025',month:'2025-09',spx:1.7,btc:4.2,spx3:2.9,btc3:6.8,sb:5620,sa:5715,bb:68000,ba:70900,
+   text:'"The Fed has FINALLY cut rates. Should have done it sooner but better late than never. Markets will BOOM!"',
+   analysis:'Fed 25bps rate cut to 4.00-4.25% range. Trump immediately claimed credit on Truth Social. Both S&P and BTC rallied. BTC had been suppressed by macro headwinds; the rate cut provided relief. The dot plot showed two more cuts expected in 2025. Powell emphasized the decision was data-driven, not politically motivated — a pointed response to months of presidential pressure.'},
+  {id:13,tag:'crypto',date:'Nov 3, 2025',month:'2025-11',spx:0.6,btc:7.4,spx3:1.2,btc3:12.1,sb:5850,sa:5885,bb:88000,ba:94500,
+   text:'"The US Bitcoin Reserve now holds 200,000 BTC. We are the LARGEST Bitcoin holder in the world. WINNING!"',
+   analysis:'Government Bitcoin accumulation disclosure: the Strategic Reserve had grown to 200,000 BTC through open-market purchases and forfeiture. BTC surged on supply squeeze narrative — with the US holding ~1% of total supply, the market perceived a structural demand floor. S&P minimally affected as this was a crypto-specific catalyst. Several sovereign wealth funds announced they were reviewing BTC allocation.'},
+  {id:14,tag:'econ',date:'Jan 20, 2026',month:'2026-01',spx:0.4,btc:1.8,spx3:0.9,btc3:2.4,sb:6090,sa:6114,bb:103000,ba:104800,
+   text:'"ONE YEAR IN OFFICE! Stock market up 20%, Bitcoin up 40%, unemployment at record lows. PROMISES MADE, PROMISES KEPT!"',
+   analysis:'One-year anniversary celebration post. Markets modestly positive as investors affirmed the scoreboard framing. BTC had returned to cycle highs. However, the underlying macro picture was mixed: inflation remained elevated at 3.1%, the trade deficit had widened despite tariffs, and interest payments on national debt had reached $1.2T annually. The post masked significant volatility experienced during the year.'},
+  {id:15,tag:'trade',date:'Feb 10, 2026',month:'2026-02',spx:-2.1,btc:-3.5,spx3:-3.8,btc3:-6.2,sb:6000,sa:5874,bb:92000,ba:88800,
+   text:'"25% tariffs on ALL European Union imports. They have ripped us off for decades. NO MORE!"',
+   analysis:'New EU tariff threat escalated the trade war to Europe for the first time. European markets fell 3%+; DAX dropped 4.2%, CAC40 fell 3.8%. Contagion hit US equities as investors feared a broader global trade war. BTC fell on global risk-off signal. The EU immediately warned of retaliatory measures targeting American tech companies and agricultural exports. Airbus canceled $12B in US engine orders.'},
+  {id:16,tag:'trade',date:'Mar 12, 2026',month:'2026-03',spx:-1.8,btc:-2.8,spx3:-3.1,btc3:-4.9,sb:5780,sa:5676,bb:86000,ba:83600,
+   text:'"The EU refuses to negotiate fairly. Tariffs going to 35%. Steel and aluminum at 50%. America FIRST!"',
+   analysis:'Tariff escalation on EU after failed initial negotiations. Markets had positioned for de-escalation; the hardening stance triggered renewed selling. BTC weakened alongside broader risk assets. S&P industrial sector fell 3.2%. Boeing shares dropped 5% on fears of retaliatory EU aircraft procurement policies. The post marked the beginning of what analysts called "Trade War Phase 2."'},
+  {id:17,tag:'trade',date:'Apr 2, 2026',month:'2026-04',spx:-4.2,btc:-5.8,spx3:-7.1,btc3:-9.4,sb:5612,sa:5376,bb:82000,ba:77200,
+   text:'"LIBERATION DAY 2.0! New global tariff wave on 60 countries. This time it\'s PERMANENT. America will be rich again!"',
+   analysis:'Second Liberation Day exactly one year after the first. The word "PERMANENT" triggered outsized panic — markets had assumed tariffs would eventually be negotiated down. BTC fell below $80K for the first time since early 2025. VIX spiked to 35. The IMF issued an emergency statement warning of global recession risk. Major US retailers pre-announced price increases of 15-20%.'},
+  {id:18,tag:'trade',date:'Apr 9, 2026',month:'2026-04',spx:7.2,btc:6.4,spx3:10.8,btc3:9.7,sb:5210,sa:5585,bb:77200,ba:82100,
+   text:'"Pausing new tariffs for 60 days to allow negotiations. Many countries calling, want to make deals. WINNING!"',
+   analysis:'Partial tariff pause déjà vu — exactly 365 days after the original Apr 9, 2025 pause. Second-largest single-day S&P gain of the dataset. BTC recovered sharply. The pattern was now familiar enough that algorithmic traders had positioned for the bounce in advance. The post came exactly at market open, suggesting coordination with trading desks. Market historians noted this was now the fourth time Trump had used a tariff pause to generate a market rally.'},
+];
+
+const TAG_LABELS = { trade:'TARIFFS', fed:'FED', crypto:'CRYPTO', econ:'ECONOMY' };
+let activeTag = 'all', activeId = null, myChart = null, leftMode = 'btc';
+
+// ── VERTICAL LINE PLUGIN ──────────────────────────────────────────────────────
+const vlinePlugin = {
+  id: 'vline',
+  afterDraw(ch) {
+    if (activeId === null) return;
+    const t = EVENTS.find(x => x.id === activeId);
+    if (!t) return;
+    const idx = SPX.findIndex(s => s.d === t.month);
+    if (idx < 0) return;
+    const x = ch.scales.x.getPixelForValue(idx);
+    const { top, bottom } = ch.chartArea;
+    const c = ch.ctx;
+    c.save();
+    c.beginPath(); c.setLineDash([5, 4]);
+    c.strokeStyle = 'rgba(245,166,35,0.9)'; c.lineWidth = 1.5;
+    c.moveTo(x, top); c.lineTo(x, bottom); c.stroke();
+    c.setLineDash([]);
+    c.fillStyle = 'rgba(245,166,35,0.95)';
+    c.font = 'bold 9px monospace'; c.textAlign = 'center';
+    c.fillText('▼', x, top + 10);
+    c.restore();
+  }
+};
+
+// ── INIT CHART ────────────────────────────────────────────────────────────────
+function initChart() {
+  const canvas = document.getElementById('myChart');
+  const area = document.querySelector('.chart-area');
+  canvas.width = area.clientWidth;
+  canvas.height = area.clientHeight;
+  const ctx = canvas.getContext('2d');
+  const labels = SPX.map(d => d.d);
+
+  myChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'S&P 500',
+          data: SPX.map(d => d.v),
+          borderColor: 'rgba(94,234,212,0.85)',
+          borderWidth: 2,
+          tension: 0.4,
+          fill: true,
+          backgroundColor(c) {
+            const g = c.chart.ctx.createLinearGradient(0, 0, 0, c.chart.height);
+            g.addColorStop(0, 'rgba(94,234,212,0.15)');
+            g.addColorStop(1, 'rgba(94,234,212,0)');
+            return g;
+          },
+          pointBackgroundColor: labels.map(() => 'transparent'),
+          pointBorderColor: labels.map(() => 'transparent'),
+          pointRadius: labels.map(() => 0),
+          pointHoverRadius: 6,
+          yAxisID: 'y',
+        },
+        {
+          label: 'Bitcoin',
+          data: BTC.map(d => d.v),
+          borderColor: 'rgba(251,191,36,0.8)',
+          borderWidth: 2,
+          borderDash: [5, 4],
+          tension: 0.3,
+          fill: false,
+          pointBackgroundColor: labels.map(() => 'transparent'),
+          pointBorderColor: labels.map(() => 'transparent'),
+          pointRadius: labels.map(() => 0),
+          pointHoverRadius: 5,
+          yAxisID: 'y2',
+        }
+      ]
+    },
+    options: {
+      responsive: false,
+      animation: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#111820',
+          borderColor: '#1e2d3d',
+          borderWidth: 1,
+          titleColor: '#f5a623',
+          bodyColor: '#c8d8e8',
+          titleFont: { family: 'Space Mono', size: 10 },
+          bodyFont: { family: 'Space Mono', size: 10 },
+          callbacks: {
+            title: items => items[0].label,
+            label: item => {
+              if (item.datasetIndex === 0) return `S&P 500: ${item.raw.toLocaleString()}`;
+              return leftMode === 'btc' ? `BTC: $${(item.raw / 1000).toFixed(1)}K` : `Fed Rate: ${item.raw.toFixed(2)}%`;
+            },
+            afterLabel: item => {
+              if (item.datasetIndex !== 0) return null;
+              const n = EVENTS.filter(t => t.month === item.label && (activeTag === 'all' || t.tag === activeTag)).length;
+              return n ? `⚡ ${n} Truth Social event(s)` : null;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(30,45,61,0.5)' },
+          ticks: { color: '#4a6070', font: { family: 'Space Mono', size: 9 }, maxTicksLimit: 8 }
+        },
+        y: {
+          position: 'right',
+          grid: { color: 'rgba(30,45,61,0.5)' },
+          ticks: { color: 'rgba(94,234,212,0.7)', font: { family: 'Space Mono', size: 9 }, callback: v => v.toLocaleString() },
+          title: { display: true, text: 'S&P 500', color: 'rgba(94,234,212,0.4)', font: { family: 'Space Mono', size: 8 } }
+        },
+        y2: {
+          position: 'left',
+          grid: { display: false },
+          ticks: { color: 'rgba(251,191,36,0.6)', font: { family: 'Space Mono', size: 9 }, callback: v => '$' + (v / 1000).toFixed(0) + 'K' },
+          title: { display: true, text: 'BITCOIN', color: 'rgba(251,191,36,0.4)', font: { family: 'Space Mono', size: 8 } }
+        }
+      }
+    },
+    plugins: [vlinePlugin]
+  });
+
+  window.addEventListener('resize', () => {
+    canvas.width = area.clientWidth;
+    canvas.height = area.clientHeight;
+    myChart.resize();
+  });
+}
+
+function refreshPoints() {
+  if (!myChart) return;
+  const labels = SPX.map(d => d.d);
+  const tMonths = new Set(EVENTS.filter(t => activeTag === 'all' || t.tag === activeTag).map(t => t.month));
+  const selMonth = activeId ? EVENTS.find(t => t.id === activeId)?.month : null;
+  const spxBg = labels.map(l => l === selMonth ? '#5EEAD4' : tMonths.has(l) ? 'rgba(94,234,212,0.5)' : 'transparent');
+  const btcBg = labels.map(l => l === selMonth ? '#FBBF24' : tMonths.has(l) ? 'rgba(251,191,36,0.4)' : 'transparent');
+  const r = labels.map(l => l === selMonth ? 8 : tMonths.has(l) ? 4 : 0);
+  myChart.data.datasets[0].pointBackgroundColor = spxBg;
+  myChart.data.datasets[0].pointBorderColor = spxBg;
+  myChart.data.datasets[0].pointRadius = r;
+  myChart.data.datasets[1].pointBackgroundColor = btcBg;
+  myChart.data.datasets[1].pointBorderColor = btcBg;
+  myChart.data.datasets[1].pointRadius = r;
+  myChart.update();
+}
+
+// ── TOGGLE LEFT AXIS ──────────────────────────────────────────────────────────
+function toggleLeft() {
+  leftMode = leftMode === 'btc' ? 'fed' : 'btc';
+  document.getElementById('axisLabel').textContent = leftMode === 'btc' ? 'BTC' : 'FED%';
+  if (!myChart) return;
+  if (leftMode === 'btc') {
+    myChart.data.datasets[1].data = BTC.map(d => d.v);
+    myChart.data.datasets[1].borderColor = 'rgba(251,191,36,0.8)';
+    myChart.options.scales.y2.ticks.callback = v => '$' + (v / 1000).toFixed(0) + 'K';
+    myChart.options.scales.y2.title.text = 'BITCOIN';
+    myChart.options.scales.y2.min = undefined;
+    myChart.options.scales.y2.max = undefined;
+  } else {
+    myChart.data.datasets[1].data = FED.map(d => d.v);
+    myChart.data.datasets[1].borderColor = 'rgba(192,132,252,0.8)';
+    myChart.options.scales.y2.ticks.callback = v => v.toFixed(2) + '%';
+    myChart.options.scales.y2.title.text = 'FED RATE';
+    myChart.options.scales.y2.min = 3.0;
+    myChart.options.scales.y2.max = 4.8;
+  }
+  refreshPoints();
+}
+
+// ── RENDER DETAIL (desktop) ───────────────────────────────────────────────────
+function updateDetail(t) {
+  const gc = v => v > 0 ? 'var(--green)' : 'var(--red)';
+  const sign = v => v > 0 ? '+' : '';
+  document.getElementById('detail-panel-container').innerHTML = `
+    <div class="dp-header">▶ ${t.date} &nbsp;—&nbsp; ${TAG_LABELS[t.tag]}</div>
+    <div class="dp-metrics">
+      <div>
+        <div class="dp-metric-label">S&P 500: 1-Day</div>
+        <div class="dp-metric-val" style="color:${gc(t.spx)}">${sign(t.spx)}${t.spx}%</div>
+      </div>
+      <div>
+        <div class="dp-metric-label">Bitcoin: 1-Day</div>
+        <div class="dp-metric-val" style="color:${gc(t.btc)}">${sign(t.btc)}${t.btc}%</div>
+      </div>
+      <div>
+        <div class="dp-metric-label">S&P 500: 3-Day</div>
+        <div class="dp-metric-val" style="font-size:11px;color:${gc(t.spx3)}">${sign(t.spx3)}${t.spx3}%</div>
+      </div>
+      <div>
+        <div class="dp-metric-label">Bitcoin: 3-Day</div>
+        <div class="dp-metric-val" style="font-size:11px;color:${gc(t.btc3)}">${sign(t.btc3)}${t.btc3}%</div>
+      </div>
+      <div>
+        <div class="dp-metric-label">SPX Level</div>
+        <div class="dp-metric-val" style="font-size:10px;color:var(--spx)">${t.sb.toLocaleString()} → ${t.sa.toLocaleString()}</div>
+      </div>
+      <div>
+        <div class="dp-metric-label">BTC Level</div>
+        <div class="dp-metric-val" style="font-size:10px;color:var(--btc)">$${(t.bb/1000).toFixed(0)}K → $${(t.ba/1000).toFixed(0)}K</div>
+      </div>
+    </div>
+    <div class="dp-divider"></div>
+    <div class="dp-analysis">${t.analysis}</div>
+  `;
+}
+
+// ── RENDER DRAWER (mobile) ────────────────────────────────────────────────────
+function openDrawer(t) {
+  const gc = v => v > 0 ? 'var(--green)' : 'var(--red)';
+  const sign = v => v > 0 ? '+' : '';
+  document.getElementById('drawerTitle').textContent = t.date + ' — ' + TAG_LABELS[t.tag];
+  document.getElementById('drawerMetrics').innerHTML = `
+    <div>
+      <div class="dm-label">S&P 500</div>
+      <div class="dm-val" style="color:${gc(t.spx)}">${sign(t.spx)}${t.spx}%</div>
+      <div class="dm-sub">1-Day Impact</div>
+    </div>
+    <div>
+      <div class="dm-label">Bitcoin</div>
+      <div class="dm-val" style="color:${gc(t.btc)}">${sign(t.btc)}${t.btc}%</div>
+      <div class="dm-sub">1-Day Impact</div>
+    </div>
+    <div>
+      <div class="dm-label">S&P 500 Level</div>
+      <div class="dm-val" style="font-size:14px;color:var(--spx)">${t.sb.toLocaleString()} → ${t.sa.toLocaleString()}</div>
+      <div class="dm-sub">3-Day: ${sign(t.spx3)}${t.spx3}%</div>
+    </div>
+    <div>
+      <div class="dm-label">Bitcoin Level</div>
+      <div class="dm-val" style="font-size:14px;color:var(--btc)">$${(t.bb/1000).toFixed(0)}K → $${(t.ba/1000).toFixed(0)}K</div>
+      <div class="dm-sub">3-Day: ${sign(t.btc3)}${t.btc3}%</div>
+    </div>
+  `;
+  document.getElementById('drawerAnalysis').textContent = t.analysis;
+  document.getElementById('drawerOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDrawer() {
+  document.getElementById('drawerOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// ── PICK EVENT ────────────────────────────────────────────────────────────────
+function pick(id) {
+  activeId = id;
+  const t = EVENTS.find(x => x.id === id);
+
+  // Highlight card
+  document.querySelectorAll('.tc').forEach(e => e.classList.remove('on'));
+  const el = document.getElementById('tc-' + id);
+  if (el) { el.classList.add('on'); el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+
+  // Update chart
+  refreshPoints();
+
+  updateDetail(t);
+  if (window.innerWidth <= 768) openDrawer(t);
+}
+
+// ── RENDER TWEETS ─────────────────────────────────────────────────────────────
+function renderTweets() {
+  const list = EVENTS.filter(t => activeTag === 'all' || t.tag === activeTag);
+  document.getElementById('cnt').textContent = list.length + ' EVENTS';
+  document.getElementById('event-list-container').innerHTML = list.map(t => {
+    const pos = t.spx > 0, bpos = t.btc > 0;
+    return `<div class="tc ${pos ? 'pos' : 'neg'} ${activeId === t.id ? 'on' : ''}" id="tc-${t.id}" onclick="pick(${t.id})">
+      <div class="tc-top">
+        <span class="tc-date">${t.date}</span>
+        <span class="tag tag-${t.tag}">${TAG_LABELS[t.tag]}</span>
+      </div>
+      <div class="tc-txt">${t.text}</div>
+      <div class="tc-row">
+        <div><div class="ti-l">S&P 1D</div><div class="ti ${pos ? 'pos' : 'neg'}">${pos ? '+' : ''}${t.spx}%</div></div>
+        <div><div class="ti-l">BTC 1D</div><div class="ti ${bpos ? 'pos' : 'neg'}">${bpos ? '+' : ''}${t.btc}%</div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── FILTER ────────────────────────────────────────────────────────────────────
+function setFilter(tag, btn) {
+  activeTag = tag;
+  activeId = null;
+  document.querySelectorAll('.fb').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  // Reset detail
+  document.getElementById('detail-panel-container').innerHTML = '<div class="dp-placeholder">▶ SELECT AN EVENT TO ANALYZE</div>';
+  renderTweets();
+  refreshPoints();
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+initChart();
+renderTweets();
+</script>
+</body>
+</html>
