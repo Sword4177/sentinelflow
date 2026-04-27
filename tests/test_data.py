@@ -24,7 +24,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from config import APP_CONFIG, FeedConfig
 from data.compliance import RISK_ORDER, _COMPLIANCE_RECORDS
-from data.feed import FeedEntry, _MOCK_ENTRIES, _build_mock_entries, _parse_sentiment
+from data.feed import FeedEntry, _MOCK_ENTRIES, _build_mock_entries, _parse_sentiment_by_rank, _parse_sentiment_by_ratio
 from data.sources import _SOURCE_RECORDS
 
 # ──────────────────────────────────────────────
@@ -84,19 +84,28 @@ class TestBuildEntries:
 
 
 class TestParseSentiment:
-    """测试 ApeWisdom 情绪判断逻辑。"""
+    """测试情绪判断逻辑（纯函数，独立可测）。"""
 
     def test_rank_rise_is_bull(self):
-        assert _parse_sentiment(1, 10) == "BULL"
+        assert _parse_sentiment_by_rank(1, 10) == "BULL"
 
     def test_rank_drop_is_bear(self):
-        assert _parse_sentiment(10, 1) == "BEAR"
+        assert _parse_sentiment_by_rank(10, 1) == "BEAR"
 
     def test_small_change_is_neutral(self):
-        assert _parse_sentiment(5, 6) == "NEUT"
+        assert _parse_sentiment_by_rank(5, 6) == "NEUT"
 
     def test_same_rank_is_neutral(self):
-        assert _parse_sentiment(5, 5) == "NEUT"
+        assert _parse_sentiment_by_rank(5, 5) == "NEUT"
+
+    def test_high_upvote_ratio_is_bull(self):
+        assert _parse_sentiment_by_ratio(0.95) == "BULL"
+
+    def test_low_upvote_ratio_is_bear(self):
+        assert _parse_sentiment_by_ratio(0.50) == "BEAR"
+
+    def test_mid_upvote_ratio_is_neutral(self):
+        assert _parse_sentiment_by_ratio(0.72) == "NEUT"
 
 
 # ──────────────────────────────────────────────
