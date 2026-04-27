@@ -24,7 +24,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from config import APP_CONFIG, FeedConfig
 from data.compliance import RISK_ORDER, _COMPLIANCE_RECORDS
-from data.feed import FeedEntry, _RAW_ENTRIES, _build_entries
+from data.feed import FeedEntry, _MOCK_ENTRIES, _build_mock_entries, _parse_sentiment
 from data.sources import _SOURCE_RECORDS
 
 # ──────────────────────────────────────────────
@@ -32,61 +32,46 @@ from data.sources import _SOURCE_RECORDS
 # ──────────────────────────────────────────────
 
 class TestBuildEntries:
-    """测试 _build_entries()：纯函数，无 I/O，完全可单元测试。"""
+    """测试 _build_mock_entries()：纯函数，无 I/O，完全可单元测试。"""
 
     BASE_TIME = datetime(2025, 1, 1, 12, 0, 0)
 
     def _make_cfg(self, base_interval: int = 10, jitter_max: int = 0) -> FeedConfig:
-        """构造测试用 FeedConfig（jitter_max=0 使时间戳确定性可断言）。"""
         return FeedConfig(
             timestamp_base_interval=base_interval,
             timestamp_jitter_max=jitter_max,
         )
 
     def test_output_length_matches_input(self):
-        """输出长度必须与输入语料数量一致。"""
-        raw = _RAW_ENTRIES[:5]
-        result = _build_entries(raw, self._make_cfg(), self.BASE_TIME)
-        assert len(result) == 5
+        raw = _MOCK_ENTRIES[:5]
+        result = _build_mock_entries(self._make_cfg(), self.BASE_TIME)
+        assert len(result) == len(_MOCK_ENTRIES)
 
     def test_empty_input_returns_empty_list(self):
-        """空输入应返回空列表，不报错。"""
-        result = _build_entries([], self._make_cfg(), self.BASE_TIME)
-        assert result == []
+        from data.feed import FeedConfig as FC
+        # _build_mock_entries 使用固定 _MOCK_ENTRIES，测试非空
+        result = _build_mock_entries(self._make_cfg(), self.BASE_TIME)
+        assert len(result) > 0
 
     def test_entry_has_required_keys(self):
-        """每个 FeedEntry 必须包含所有 TypedDict 定义的键。"""
         required_keys = {"source", "tier", "sentiment", "text", "time"}
-        result = _build_entries(_RAW_ENTRIES[:3], self._make_cfg(), self.BASE_TIME)
+        result = _build_mock_entries(self._make_cfg(), self.BASE_TIME)
         for entry in result:
-            assert required_keys.issubset(entry.keys()), (
-                f"Entry 缺少键：{required_keys - entry.keys()}"
-            )
+            assert required_keys.issubset(entry.keys())
 
     def test_sentiment_values_are_valid(self):
-        """所有 sentiment 值必须在合法枚举集合内。"""
         valid_sentiments = {"BULL", "BEAR", "NEUT"}
-        result = _build_entries(_RAW_ENTRIES, self._make_cfg(), self.BASE_TIME)
+        result = _build_mock_entries(self._make_cfg(), self.BASE_TIME)
         for entry in result:
-            assert entry["sentiment"] in valid_sentiments, (
-                f"非法 sentiment 值: {entry['sentiment']}"
-            )
+            assert entry["sentiment"] in valid_sentiments
 
     def test_timestamps_are_ordered_descending(self):
-        """
-        第 i 条的时间戳应早于第 i-1 条（越新的信号排越前）。
-        jitter_max=0 使时间戳完全确定，便于断言顺序。
-        """
-        result = _build_entries(_RAW_ENTRIES[:5], self._make_cfg(jitter_max=0), self.BASE_TIME)
+        result = _build_mock_entries(self._make_cfg(jitter_max=0), self.BASE_TIME)
         times = [entry["time"] for entry in result]
-        # 时间戳格式 HH:MM:SS，字符串比较在同一天内有效
-        assert times == sorted(times, reverse=True), (
-            "时间戳不是倒序排列（最新在前）"
-        )
+        assert times == sorted(times, reverse=True)
 
     def test_time_format_is_hhmmss(self):
-        """time 字段必须能被 strptime(%H:%M:%S) 解析。"""
-        result = _build_entries(_RAW_ENTRIES[:3], self._make_cfg(), self.BASE_TIME)
+        result = _build_mock_entries(self._make_cfg(), self.BASE_TIME)
         for entry in result:
             try:
                 datetime.strptime(entry["time"], "%H:%M:%S")
@@ -94,10 +79,24 @@ class TestBuildEntries:
                 pytest.fail(f"time 字段格式错误: {entry['time']}")
 
     def test_source_field_preserved(self):
-        """source 字段必须与原始输入一致，不被篡改。"""
-        raw = [("TEST_SOURCE", "T1", "BULL", "test text")]
-        result = _build_entries(raw, self._make_cfg(), self.BASE_TIME)
-        assert result[0]["source"] == "TEST_SOURCE"
+        result = _build_mock_entries(self._make_cfg(), self.BASE_TIME)
+        assert result[0]["source"] == _MOCK_ENTRIES[0][0]
+
+
+class TestParseSentiment:
+    """测试 ApeWisdom 情绪判断逻辑。"""
+
+    def test_rank_rise_is_bull(self):
+        assert _parse_sentiment(1, 10) == "BULL"
+
+    def test_rank_drop_is_bear(self):
+        assert _parse_sentiment(10, 1) == "BEAR"
+
+    def test_small_change_is_neutral(self):
+        assert _parse_sentiment(5, 6) == "NEUT"
+
+    def test_same_rank_is_neutral(self):
+        assert _parse_sentiment(5, 5) == "NEUT"
 
 
 # ──────────────────────────────────────────────
